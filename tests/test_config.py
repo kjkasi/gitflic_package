@@ -76,6 +76,21 @@ def test_load_config_rejects_invalid_positive_values(tmp_path: Path) -> None:
         load_config(write_config(tmp_path, data))
 
 
+def test_resolve_token_rejects_header_unsafe_token_without_echoing_it() -> None:
+    config = GitFlicConfig(
+        base_url="https://registry.gitflic.ru",
+        owner_alias="team",
+        project_alias="npm-cache",
+        token_env="CUSTOM_TOKEN",
+        timeout_seconds=60.0,
+        page_size=100,
+    )
+
+    with pytest.raises(ValueError) as error:
+        resolve_token(config, {"CUSTOM_TOKEN": "SECRET\n"})
+    assert "SECRET" not in str(error.value)
+
+
 def test_resolve_token_reads_named_environment_variable_and_rejects_missing_token() -> None:
     config = GitFlicConfig(
         base_url="https://registry.gitflic.ru",

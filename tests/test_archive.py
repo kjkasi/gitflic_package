@@ -82,6 +82,47 @@ def test_scan_reports_missing_or_malformed_metadata(tmp_path: Path) -> None:
     assert all(issue.reason for issue in result.issues)
 
 
+def test_scan_continues_after_invalid_utf8_and_truncated_archives(tmp_path: Path) -> None:
+    invalid_utf8 = tmp_path / "invalid-utf8.tgz"
+    with tarfile.open(invalid_utf8, "w:gz") as archive:
+        payload = b'{"name":"pkg","version":"\\xff"}'
+        member = tarfile.TarInfo("package/package.json")
+        member.size = len(payload)
+        archive.addfile(member, io.BytesIO(payload))
+    truncated = tmp_path / "truncated.tgz"
+    truncated.write_bytes(b"\\x1f\\x8b\\x08truncated")
+    valid = tmp_path / "valid.tgz"
+    write_tgz(valid)
+
+    result = scan_archives(tmp_path)
+
+    assert [artifact.source_path for artifact in result.artifacts] == [valid]
+    assert {issue.source_path for issue in result.issues} == {invalid_utf8, truncated}
+
+
+def test_inspect_rejects_unsafe_url_components(tmp_path: Path) -> None:
+    for index, metadata in enumerate(
+        ({"name": "pkg", "version": ".."}, {"name": "pkg", "version": "  "}, {"name": "..", "version": "1.0.0"})
+    ):
+        path = tmp_path / f"unsafe-{index}.tgz"
+        write_tgz(path, metadata)
+        with pytest.raises(ArchiveValidationError):
+            inspect_archive(path)
+
+
+def test_inspect_rejects_duplicate_package_metadata_members(tmp_path: Path) -> None:
+    path = tmp_path / "duplicate-members.tgz"
+    with tarfile.open(path, "w:gz") as archive:
+        for version in (b"1.0.0", b"2.0.0"):
+            payload = b'{"name":"pkg","version":"' + version + b'"}'
+            member = tarfile.TarInfo("package/package.json")
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
+
+    with pytest.raises(ArchiveValidationError, match="multiple"):
+        inspect_archive(path)
+
+
 def test_scan_rejects_symlink_package_json(tmp_path: Path) -> None:
     path = tmp_path / "symlink.tgz"
     write_tgz(path, symlink=True)

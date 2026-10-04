@@ -128,4 +128,6 @@ def resolve_token(
     token = environment.get(config.token_env)
     if token is None or not token.strip():
         raise ValueError(f"environment variable {config.token_env} is missing or empty")
+    if any(ord(character) < 32 or ord(character) == 127 for character in token):
+        raise ValueError(f"environment variable {config.token_env} contains invalid token characters")
     return token

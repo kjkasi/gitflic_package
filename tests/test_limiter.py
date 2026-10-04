@@ -44,3 +44,4 @@ def test_invalid_retry_after_uses_bounded_backoff() -> None:
     assert backoff_seconds(1, "not-a-delay") == 1.0
     assert backoff_seconds(99, "not-a-delay") <= 60.0
     assert backoff_seconds(1, "4") == 4.0
+    assert backoff_seconds(1, "3600") == 3600.0

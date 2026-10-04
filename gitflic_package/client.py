@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Mapping, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .archive import PackageArtifact
 from .config import GitFlicConfig
@@ -32,8 +32,16 @@ class HttpTransport(Protocol):
     ) -> HttpResponse: ...
 
 
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class UrlLibTransport:
     """Standard-library HTTP transport retaining response bodies for errors."""
+
+    def __init__(self) -> None:
+        self._opener = build_opener(NoRedirectHandler())
 
     def request(
         self,
@@ -45,17 +53,21 @@ class UrlLibTransport:
     ) -> HttpResponse:
         request = Request(url, data=body, headers=dict(headers), method=method)
         try:
-            with urlopen(request, timeout=timeout) as response:
+            with self._opener.open(request, timeout=timeout) as response:
                 return HttpResponse(
                     status=response.status,
                     headers=dict(response.headers.items()),
                     body=response.read(1024 * 1024),
                 )
         except HTTPError as error:
+            try:
+                body = error.read(1024 * 1024)
+            except (OSError, TimeoutError) as read_error:
+                raise TransportError("GitFlic request timed out while reading response") from read_error
             return HttpResponse(
                 status=error.code,
                 headers=dict(error.headers.items()),
-                body=error.read(1024 * 1024),
+                body=body,
             )
         except URLError as error:
             raise TransportError("GitFlic request failed") from error
@@ -99,6 +111,8 @@ class GitFlicClient:
         rate_limiter: RateLimiter,
         transport: HttpTransport,
     ) -> None:
+        if any(ord(character) < 32 or ord(character) == 127 for character in token):
+            raise GitFlicError("token contains invalid header characters")
         self.config = config
         self.token = token
         self.rate_limiter = rate_limiter
@@ -111,8 +125,16 @@ class GitFlicClient:
         return headers
 
     def _safe_body(self, response: HttpResponse) -> str:
-        message = response.body[:512].decode("utf-8", errors="replace")
-        return message.replace(self.token, "[REDACTED]")
+        message = response.body.decode("utf-8", errors="replace")
+        return message.replace(self.token, "[REDACTED]")[:512]
+
+    @staticmethod
+    def _header_value(headers: Mapping[str, str], name: str) -> str | None:
+        wanted = name.lower()
+        for key, value in headers.items():
+            if key.lower() == wanted:
+                return value
+        return None
 
     def _request(
         self, method: str, url: str, body: bytes | None = None, content_type: str | None = None
@@ -135,7 +157,7 @@ class GitFlicClient:
                 self.rate_limiter.sleeper(backoff_seconds(attempt + 1, None))
                 continue
 
-            retry_after = response.headers.get("Retry-After")
+            retry_after = self._header_value(response.headers, "Retry-After")
             if response.status == 429 or 500 <= response.status <= 599:
                 if attempt >= max_retries:
                     raise RetryExhaustedError(
@@ -180,17 +202,36 @@ class GitFlicClient:
                 raise GitFlicError("GitFlic inventory response was invalid") from error
             if not isinstance(payload, dict):
                 raise GitFlicError("GitFlic inventory response was invalid")
-            page_info = payload.get("page") or {}
+            page_info = payload.get("page")
+            if not isinstance(page_info, dict):
+                raise GitFlicError("GitFlic inventory response is missing page metadata")
+            raw_total_pages = page_info.get("totalPages")
+            if (
+                isinstance(raw_total_pages, bool)
+                or not isinstance(raw_total_pages, int)
+                or raw_total_pages < 0
+            ):
+                raise GitFlicError("GitFlic inventory response has invalid page metadata")
             if total_pages is None:
-                total_pages = int(page_info.get("totalPages", 1))
-            embedded = payload.get("_embedded") or {}
-            entries = embedded.get("simplePackageInfoModelList") or []
+                total_pages = raw_total_pages
+            elif total_pages != raw_total_pages:
+                raise GitFlicError("GitFlic inventory response changed page metadata")
+            embedded = payload.get("_embedded")
+            if not isinstance(embedded, dict):
+                raise GitFlicError("GitFlic inventory response is missing package entries")
+            entries = embedded.get("simplePackageInfoModelList")
+            if not isinstance(entries, list):
+                raise GitFlicError("GitFlic inventory response has invalid package entries")
             for entry in entries:
                 if not isinstance(entry, dict):
-                    continue
+                    raise GitFlicError("GitFlic inventory response has invalid package entries")
                 name = entry.get("name") or entry.get("packageName")
                 version = entry.get("version") or entry.get("packageVersion")
                 scope = entry.get("packageScope") or entry.get("scope")
+                if not isinstance(name, str) or not name or not isinstance(version, str) or not version:
+                    raise GitFlicError("GitFlic inventory response has invalid package entries")
+                if scope is not None and not isinstance(scope, str):
+                    raise GitFlicError("GitFlic inventory response has invalid package entries")
                 if scope and isinstance(name, str) and not name.startswith("@"):
                     name = f"@{scope}/{name}"
                 if isinstance(name, str) and isinstance(version, str):

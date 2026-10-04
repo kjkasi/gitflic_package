@@ -64,6 +64,7 @@ def _print_import_summary(summary, verbose: bool) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    token: str | None = None
     try:
         config = load_config(args.config)
         scan = scan_archives(config.source_dir)
@@ -86,5 +87,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         _print_import_summary(summary, args.verbose)
         return 0 if summary.ok else 1
     except (ValueError, InventoryError, GitFlicError, OSError) as error:
-        print(f"error: {error}", file=sys.stderr)
+        message = str(error)
+        if token:
+            message = message.replace(token, "[REDACTED]")
+        print(f"error: {message}", file=sys.stderr)
         return 1

@@ -61,5 +61,5 @@ def backoff_seconds(
 ) -> float:
     parsed = parse_retry_after(retry_after, now)
     if parsed is not None:
-        return min(parsed, 60.0)
+        return parsed
     return min(60.0, float(2 ** max(0, attempt - 1)))

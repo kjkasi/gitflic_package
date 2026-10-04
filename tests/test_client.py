@@ -1,8 +1,11 @@
 import json
 from pathlib import Path
+from urllib.error import HTTPError
+from urllib.request import Request
 
 import pytest
 
+import gitflic_package.client as client_module
 from gitflic_package.archive import PackageArtifact
 from gitflic_package.client import (
     AuthenticationError,
@@ -10,6 +13,10 @@ from gitflic_package.client import (
     DuplicateError,
     GitFlicClient,
     HttpResponse,
+    GitFlicError,
+    RetryExhaustedError,
+    TransportError,
+    UrlLibTransport,
 )
 from gitflic_package.config import GitFlicConfig
 from gitflic_package.limiter import RateLimiter
@@ -59,8 +66,30 @@ def artifact(tmp_path: Path, *, scoped: bool = False) -> PackageArtifact:
     )
 
 
-def make_client(transport: FakeTransport) -> GitFlicClient:
-    return GitFlicClient(config(), "SECRET", RateLimiter(0.0), transport)
+def make_client(transport: FakeTransport, delays: list[float] | None = None) -> GitFlicClient:
+    sleeper = (lambda delay: delays.append(delay)) if delays is not None else (lambda delay: None)
+    return GitFlicClient(config(), "SECRET", RateLimiter(0.0, sleeper=sleeper), transport)
+
+
+def test_transport_does_not_follow_redirects() -> None:
+    handler = client_module.NoRedirectHandler()
+    assert handler.redirect_request(Request("https://example.test"), None, 302, "redirect", {}, "http://other.test") is None
+
+
+def test_transport_converts_error_body_timeout_to_transport_error(monkeypatch) -> None:
+    class TimeoutBody:
+        def read(self, size):
+            raise TimeoutError("timed out")
+
+        def close(self):
+            pass
+
+    error = HTTPError("https://example.test", 503, "unavailable", {}, TimeoutBody())
+    transport = UrlLibTransport()
+    monkeypatch.setattr(transport._opener, "open", lambda request, timeout: (_ for _ in ()).throw(error))
+
+    with pytest.raises(TransportError):
+        transport.request("GET", "https://example.test", {}, None, 1.0)
 
 
 def test_list_package_versions_follows_pagination() -> None:
@@ -78,6 +107,20 @@ def test_list_package_versions_follows_pagination() -> None:
     assert "page=0" in transport.requests[0][1]
     assert "page=1" in transport.requests[1][1]
     assert all(request[2]["Authorization"] == "token SECRET" for request in transport.requests)
+
+
+def test_inventory_rejects_missing_or_partial_pages_without_token_echo(tmp_path: Path) -> None:
+    malformed = FakeTransport([response(200, {"page": {"totalPages": "SECRET"}})])
+    with pytest.raises(GitFlicError) as malformed_error:
+        make_client(malformed).list_package_versions()
+    assert "SECRET" not in str(malformed_error.value)
+
+    partial = FakeTransport([
+        response(200, {"page": {"totalPages": 2}, "_embedded": {"simplePackageInfoModelList": []}}),
+        response(200, {}),
+    ])
+    with pytest.raises(GitFlicError):
+        make_client(partial).list_package_versions()
 
 
 def test_upload_builds_unscoped_url_and_token_header(tmp_path: Path) -> None:
@@ -108,13 +151,15 @@ def test_upload_builds_scoped_url_without_leading_at(tmp_path: Path) -> None:
 
 def test_client_retries_429_and_honors_retry_after(tmp_path: Path) -> None:
     transport = FakeTransport(
-        [response(429, headers={"Retry-After": "3"}), response(200)]
+        [response(429, headers={"retry-after": "3"}), response(200)]
     )
-    client = make_client(transport)
+    delays: list[float] = []
+    client = make_client(transport, delays)
 
     client.upload(artifact(tmp_path))
 
     assert len(transport.requests) == 2
+    assert delays == [3.0]
 
 
 def test_client_retries_transient_5xx(tmp_path: Path) -> None:
