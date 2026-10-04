@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -38,7 +39,7 @@ def parse_retry_after(value: str | None, now: datetime | None = None) -> float |
         return None
     try:
         seconds = float(value.strip())
-        return seconds if seconds >= 0 else None
+        return seconds if math.isfinite(seconds) and seconds >= 0 else None
     except (AttributeError, ValueError):
         pass
 
@@ -53,7 +54,8 @@ def parse_retry_after(value: str | None, now: datetime | None = None) -> float |
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
-    return max(0.0, (retry_at - current).total_seconds())
+    delay = (retry_at - current).total_seconds()
+    return max(0.0, delay) if math.isfinite(delay) else None
 
 
 def backoff_seconds(
@@ -62,4 +64,5 @@ def backoff_seconds(
     parsed = parse_retry_after(retry_after, now)
     if parsed is not None:
         return parsed
-    return min(60.0, float(2 ** max(0, attempt - 1)))
+    exponent = min(6, max(0, attempt - 1))
+    return min(60.0, 2.0**exponent)

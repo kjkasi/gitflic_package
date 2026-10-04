@@ -36,6 +36,14 @@ class ArchiveValidationError(ValueError):
     """Raised when an archive cannot provide valid npm package metadata."""
 
 
+_SEMVER_IDENTIFIER = r"(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+_SEMVER_RE = re.compile(
+    rf"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    rf"(?:-(?:{_SEMVER_IDENTIFIER})(?:\.(?:{_SEMVER_IDENTIFIER}))*)?"
+    rf"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+)
+
+
 def discover_archives(source_dir: Path) -> tuple[Path, ...]:
     """Return recursively discovered tarballs in deterministic path order."""
     return tuple(
@@ -80,13 +88,17 @@ def _metadata_name(value: object) -> tuple[str, str, str | None]:
 def _metadata_version(value: object) -> str:
     if not isinstance(value, str) or not value:
         raise ArchiveValidationError("package version must be a non-empty string")
-    return _safe_component(value, "package version")
+    if not _SEMVER_RE.fullmatch(value):
+        raise ArchiveValidationError("package version must be valid npm semver")
+    return value
 
 
 def inspect_archive(path: Path) -> PackageArtifact:
     """Inspect package/package.json without extracting the archive."""
     path = Path(path)
     try:
+        if path.is_symlink():
+            raise ArchiveValidationError("source archive must not be a symlink")
         with tarfile.open(path, mode="r:gz") as archive:
             members = [member for member in archive.getmembers() if member.name == "package/package.json"]
             if not members:

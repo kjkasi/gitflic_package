@@ -43,11 +43,19 @@ def _issue_name(path: Path) -> str:
     return path.name
 
 
+def _request_attempts(client: GitFlicClient) -> int:
+    attempts = getattr(client, "last_request_attempts", 1)
+    return attempts if isinstance(attempts, int) and attempts >= 0 else 1
+
+
 def run_import(
     scan: ScanResult, client: GitFlicClient, dry_run: bool = False
 ) -> ImportSummary:
     try:
         existing = client.list_package_versions()
+        inventory_requests = getattr(client, "last_inventory_requests", 1)
+        if not isinstance(inventory_requests, int) or inventory_requests < 1:
+            inventory_requests = 1
     except Exception as error:
         raise InventoryError(f"could not load GitFlic package inventory: {error}") from error
 
@@ -87,7 +95,7 @@ def run_import(
                     name=artifact.full_name,
                     version=artifact.version,
                     status="skipped",
-                    attempts=1,
+                    attempts=_request_attempts(client),
                     message=str(error),
                 )
             )
@@ -98,7 +106,7 @@ def run_import(
                     name=artifact.full_name,
                     version=artifact.version,
                     status="failed",
-                    attempts=1,
+                    attempts=_request_attempts(client),
                     message=str(error),
                 )
             )
@@ -109,7 +117,7 @@ def run_import(
                     name=artifact.full_name,
                     version=artifact.version,
                     status="uploaded",
-                    attempts=1,
+                    attempts=_request_attempts(client),
                     message="uploaded",
                 )
             )
@@ -143,7 +151,7 @@ def run_import(
     )}
     return ImportSummary(
         results=tuple(results),
-        inventory_requests=1,
+        inventory_requests=inventory_requests,
         uploaded=counts["uploaded"],
         skipped=counts["skipped"],
         planned=counts["planned"],

@@ -76,6 +76,35 @@ def test_run_import_uploads_new_artifacts_and_counts_results(tmp_path: Path) -> 
     assert summary.ok is True
 
 
+def test_run_import_preserves_request_attempt_counts(tmp_path: Path) -> None:
+    class CountingClient(FakeClient):
+        last_inventory_requests = 3
+        last_request_attempts = 4
+
+    package = item(tmp_path, "pkg", "1.0.0")
+    summary = run_import(ScanResult((package,), (), ()), CountingClient())
+
+    assert summary.inventory_requests == 3
+    assert summary.results[0].attempts == 4
+
+
+def test_run_import_reports_zero_attempts_for_pre_request_failure(tmp_path: Path) -> None:
+    class SourceReadFailureClient(FakeClient):
+        last_request_attempts = 4
+
+        def upload(self, artifact: PackageArtifact) -> None:
+            self.last_request_attempts = 0
+            artifact.source_path.read_bytes()
+
+    missing = item(tmp_path, "missing", "1.0.0")
+    missing.source_path.unlink()
+
+    summary = run_import(ScanResult((missing,), (), ()), SourceReadFailureClient())
+
+    assert summary.results[0].status == "failed"
+    assert summary.results[0].attempts == 0
+
+
 def test_run_import_continues_after_one_upload_failure(tmp_path: Path) -> None:
     failed = item(tmp_path, "failed", "1.0.0")
     successful = item(tmp_path, "successful", "1.0.0")

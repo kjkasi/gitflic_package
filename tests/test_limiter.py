@@ -41,7 +41,9 @@ def test_retry_after_accepts_seconds_and_http_date() -> None:
 
 def test_invalid_retry_after_uses_bounded_backoff() -> None:
     assert parse_retry_after("not-a-delay") is None
+    assert parse_retry_after("nan") is None
+    assert parse_retry_after("inf") is None
     assert backoff_seconds(1, "not-a-delay") == 1.0
-    assert backoff_seconds(99, "not-a-delay") <= 60.0
+    assert backoff_seconds(10**9, "not-a-delay") == 60.0
     assert backoff_seconds(1, "4") == 4.0
     assert backoff_seconds(1, "3600") == 3600.0

@@ -14,6 +14,7 @@ from gitflic_package.client import (
     GitFlicClient,
     HttpResponse,
     GitFlicError,
+    HttpStatusError,
     RetryExhaustedError,
     TransportError,
     UrlLibTransport,
@@ -100,9 +101,11 @@ def test_list_package_versions_follows_pagination() -> None:
         ]
     )
 
-    versions = make_client(transport).list_package_versions()
+    client = make_client(transport)
+    versions = client.list_package_versions()
 
     assert versions == {("pkg", "1.0.0"), ("@scope/pkg", "2.0.0")}
+    assert client.last_inventory_requests == 2
     assert len(transport.requests) == 2
     assert "page=0" in transport.requests[0][1]
     assert "page=1" in transport.requests[1][1]
@@ -158,6 +161,7 @@ def test_client_retries_429_and_honors_retry_after(tmp_path: Path) -> None:
 
     client.upload(artifact(tmp_path))
 
+    assert client.last_request_attempts == 2
     assert len(transport.requests) == 2
     assert delays == [3.0]
 
@@ -170,6 +174,20 @@ def test_client_retries_transient_5xx(tmp_path: Path) -> None:
     assert len(transport.requests) == 2
 
 
+def test_upload_resets_attempts_before_source_read(tmp_path: Path) -> None:
+    transport = FakeTransport([])
+    item = artifact(tmp_path)
+    item.source_path.unlink()
+    client = make_client(transport)
+    client.last_request_attempts = 4
+
+    with pytest.raises(GitFlicError, match="could not read source archive"):
+        client.upload(item)
+
+    assert client.last_request_attempts == 0
+    assert transport.requests == []
+
+
 def test_client_classifies_403_and_404(tmp_path: Path) -> None:
     with pytest.raises(AuthenticationError) as forbidden:
         make_client(FakeTransport([response(403, {"message": "SECRET"})])).upload(artifact(tmp_path))
@@ -180,3 +198,9 @@ def test_client_classifies_403_and_404(tmp_path: Path) -> None:
 
     with pytest.raises(DuplicateError):
         make_client(FakeTransport([response(409)])).upload(artifact(tmp_path))
+
+    with pytest.raises(DuplicateError):
+        make_client(FakeTransport([response(400, {"message": "version already exists"})])).upload(artifact(tmp_path))
+
+    with pytest.raises(HttpStatusError):
+        make_client(FakeTransport([response(400, {"message": "invalid request"})])).upload(artifact(tmp_path))

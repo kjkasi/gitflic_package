@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,9 +40,15 @@ def _required_string(value: object, field: str) -> str:
 
 
 def _positive_float(value: object, field: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field} must be positive")
-    return float(value)
+    try:
+        converted = float(value)
+    except OverflowError as error:
+        raise ValueError(f"{field} must be positive") from error
+    if not math.isfinite(converted) or converted <= 0:
+        raise ValueError(f"{field} must be positive")
+    return converted
 
 
 def _positive_int(value: object, field: str) -> int:
@@ -51,9 +58,15 @@ def _positive_int(value: object, field: str) -> int:
 
 
 def _nonnegative_float(value: object, field: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field} must be non-negative")
-    return float(value)
+    try:
+        converted = float(value)
+    except OverflowError as error:
+        raise ValueError(f"{field} must be non-negative") from error
+    if not math.isfinite(converted) or converted < 0:
+        raise ValueError(f"{field} must be non-negative")
+    return converted
 
 
 def _nonnegative_int(value: object, field: str) -> int:

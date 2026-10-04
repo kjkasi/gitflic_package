@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Mapping, Protocol
 from urllib.error import HTTPError, URLError
@@ -117,6 +118,8 @@ class GitFlicClient:
         self.token = token
         self.rate_limiter = rate_limiter
         self.transport = transport
+        self.last_request_attempts = 0
+        self.last_inventory_requests = 0
 
     def _headers(self, content_type: str | None = None) -> dict[str, str]:
         headers = {"Authorization": f"token {self.token}"}
@@ -141,7 +144,9 @@ class GitFlicClient:
     ) -> HttpResponse:
         retry_after: str | None = None
         max_retries = max(0, self.rate_limiter.max_retries)
+        self.last_request_attempts = 0
         for attempt in range(max_retries + 1):
+            self.last_request_attempts += 1
             self.rate_limiter.wait()
             try:
                 response = self.transport.request(
@@ -178,7 +183,10 @@ class GitFlicClient:
             raise AuthenticationError("GitFlic authentication or package permission denied")
         if response.status == 404:
             raise DestinationError("GitFlic package destination was not found")
-        if response.status == 409:
+        if response.status == 409 or (
+            400 <= response.status < 500
+            and re.search(r"\balready\s+exists?\b", message, re.IGNORECASE)
+        ):
             raise DuplicateError("GitFlic package version already exists")
         raise HttpStatusError(
             f"GitFlic HTTP {response.status}: {message or 'request failed'}"
@@ -187,6 +195,7 @@ class GitFlicClient:
     def list_package_versions(self) -> set[tuple[str, str]]:
         """Fetch all destination package versions before any upload."""
         versions: set[tuple[str, str]] = set()
+        self.last_inventory_requests = 0
         page = 0
         total_pages: int | None = None
         while total_pages is None or page < total_pages:
@@ -195,6 +204,7 @@ class GitFlicClient:
                 f"&size={self.config.page_size}"
             )
             response = self._request("GET", url)
+            self.last_inventory_requests += self.last_request_attempts
             self._raise_for_status(response)
             try:
                 payload = json.loads(response.body.decode("utf-8"))
@@ -258,6 +268,7 @@ class GitFlicClient:
         return "/".join([parts[0].rstrip("/")] + [quote(part, safe="") for part in parts[1:]])
 
     def upload(self, artifact: PackageArtifact) -> None:
+        self.last_request_attempts = 0
         try:
             body = artifact.source_path.read_bytes()
         except OSError as error:

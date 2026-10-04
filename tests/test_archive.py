@@ -110,6 +110,36 @@ def test_inspect_rejects_unsafe_url_components(tmp_path: Path) -> None:
             inspect_archive(path)
 
 
+def test_inspect_accepts_valid_semver_and_rejects_ranges_or_malformed_versions(tmp_path: Path) -> None:
+    valid = ("0.0.0", "1.2.3-alpha.1", "1.2.3+build.7", "10.20.30-rc.1+linux-x64")
+    invalid = ("latest", "^1.2.3", "1.2", "01.2.3", "1.2.03", "1.2.3-01")
+    for index, version in enumerate(valid):
+        path = tmp_path / f"valid-{index}.tgz"
+        write_tgz(path, {"name": "pkg", "version": version})
+        assert inspect_archive(path).version == version
+    for index, version in enumerate(invalid):
+        path = tmp_path / f"invalid-{index}.tgz"
+        write_tgz(path, {"name": "pkg", "version": version})
+        with pytest.raises(ArchiveValidationError, match="semver"):
+            inspect_archive(path)
+
+
+def test_scan_reports_source_archive_symlink(tmp_path: Path) -> None:
+    target = tmp_path / "outside.tgz"
+    link = tmp_path / "link.tgz"
+    write_tgz(target)
+    try:
+        link.symlink_to(target)
+    except (OSError, NotImplementedError):
+        pytest.skip("symbolic links are unavailable")
+
+    result = scan_archives(tmp_path)
+
+    assert [artifact.source_path for artifact in result.artifacts] == [target]
+    assert [issue.source_path for issue in result.issues] == [link]
+    assert "symlink" in result.issues[0].reason
+
+
 def test_inspect_rejects_duplicate_package_metadata_members(tmp_path: Path) -> None:
     path = tmp_path / "duplicate-members.tgz"
     with tarfile.open(path, "w:gz") as archive:

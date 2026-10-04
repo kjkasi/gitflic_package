@@ -76,6 +76,21 @@ def test_load_config_rejects_invalid_positive_values(tmp_path: Path) -> None:
         load_config(write_config(tmp_path, data))
 
 
+def test_load_config_rejects_non_finite_float_values(tmp_path: Path) -> None:
+    for section, field, value in (
+        ("gitflic", "timeout_seconds", float("nan")),
+        ("gitflic", "timeout_seconds", float("inf")),
+        ("gitflic", "timeout_seconds", 10**1000),
+        ("rate_limit", "min_interval_seconds", float("nan")),
+
+        ("rate_limit", "min_interval_seconds", float("inf")),
+    ):
+        data = valid_config(tmp_path)
+        data.setdefault(section, {})[field] = value
+        with pytest.raises(ValueError, match=field):
+            load_config(write_config(tmp_path, data))
+
+
 def test_resolve_token_rejects_header_unsafe_token_without_echoing_it() -> None:
     config = GitFlicConfig(
         base_url="https://registry.gitflic.ru",
