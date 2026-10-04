@@ -1,3 +1,4 @@
+import io
 import json
 import tarfile
 from pathlib import Path
@@ -46,7 +47,7 @@ def write_valid_archive(path: Path) -> None:
     with tarfile.open(path, "w:gz") as archive:
         member = tarfile.TarInfo("package/package.json")
         member.size = len(payload)
-        archive.addfile(member, __import__("io").BytesIO(payload))
+        archive.addfile(member, io.BytesIO(payload))
 
 
 def test_validate_returns_nonzero_for_invalid_archive(tmp_path: Path, capsys) -> None:

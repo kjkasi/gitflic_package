@@ -30,7 +30,7 @@ Create a JSON file pointing at the source directory and GitFlic project:
 }
 ```
 
-`source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` defaults to `https://registry.gitflic.ru`; `timeout_seconds` and `page_size` must be positive. The default request interval is 10 seconds, approximately 360 requests per hour.
+`source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` defaults to `https://registry.gitflic.ru`; `timeout_seconds` and `page_size` must be positive.
 
 The transport token is read only from the configured environment variable. It is never accepted as a command-line argument or stored in the JSON file.
 

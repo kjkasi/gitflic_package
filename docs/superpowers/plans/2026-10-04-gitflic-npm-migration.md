@@ -48,25 +48,25 @@
 - `RateLimitConfig` fields: `min_interval_seconds: float = 10.0`, `max_retries: int = 5`.
 - `AppConfig` fields: `source_dir: Path`, `gitflic: GitFlicConfig`, `rate_limit: RateLimitConfig`.
 
-- [ ] **Step 1: Write the failing configuration tests**
+- [x] **Step 1: Write the failing configuration tests**
 
 Add tests named `test_load_config_applies_defaults_and_normalizes_base_url`, `test_load_config_reads_explicit_rate_limit`, `test_load_config_rejects_missing_source_dir`, `test_load_config_rejects_invalid_positive_values`, and `test_resolve_token_reads_named_environment_variable_and_rejects_missing_token`. Assert the exact JSON shape from the spec, normalized base URL without a trailing slash, default `10.0`/`5`, UNC-compatible `Path` handling, and no token value in validation errors.
 
-- [ ] **Step 2: Run the configuration tests to verify failure**
+- [x] **Step 2: Run the configuration tests to verify failure**
 
 Run: `python -m pytest tests/test_config.py -q`
 Expected: FAIL because `gitflic_package.config` and its dataclasses/functions do not exist.
 
-- [ ] **Step 3: Implement configuration loading**
+- [x] **Step 3: Implement configuration loading**
 
 Implement `config.py` with `json.load`, `Path`, dataclass validation, required-field checks, positive numeric checks, base URL normalization, and environment lookup. Keep token resolution separate from file loading so `validate` does not need credentials. Add `pyproject.toml` with Python `>=3.10`, pytest test configuration, and no runtime dependencies.
 
-- [ ] **Step 4: Run the configuration tests to verify the implementation**
+- [x] **Step 4: Run the configuration tests to verify the implementation**
 
 Run: `python -m pytest tests/test_config.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit the scaffold and configuration**
+- [x] **Step 5: Commit the scaffold and configuration**
 
 ```bash
 git add pyproject.toml gitflic_package/__init__.py gitflic_package/config.py tests/test_config.py
@@ -88,25 +88,25 @@ git commit -m "feat: add GitFlic migration configuration"
 - Produces `scan_archives(source_dir: Path) -> ScanResult`.
 - `PackageArtifact` is the input consumed by Tasks 3 and 4.
 
-- [ ] **Step 1: Write the failing archive tests**
+- [x] **Step 1: Write the failing archive tests**
 
 Create helpers that write valid `.tgz` files with `package/package.json`. Add tests named `test_discover_archives_is_recursive_case_insensitive_and_sorted`, `test_inspect_archive_reads_unscoped_metadata`, `test_inspect_archive_splits_scoped_name`, `test_scan_reports_missing_or_malformed_metadata`, `test_scan_rejects_symlink_package_json`, and `test_scan_deduplicates_same_name_and_version_deterministically`. Assert `@scope/pkg` becomes `package_scope="scope"` and `package_name="pkg"`, invalid files do not stop other files, and only the first sorted duplicate is an artifact.
 
-- [ ] **Step 2: Run the archive tests to verify failure**
+- [x] **Step 2: Run the archive tests to verify failure**
 
 Run: `python -m pytest tests/test_archive.py -q`
 Expected: FAIL because `gitflic_package.archive` does not exist.
 
-- [ ] **Step 3: Implement archive discovery and inspection**
+- [x] **Step 3: Implement archive discovery and inspection**
 
 Use `Path.rglob` with a case-insensitive `.tgz` check and sorted paths. Inspect tar members without extracting, require a regular `package/package.json` member, parse JSON, validate object/name/version/scoped-name shape, and reject unsafe or symlink metadata members. Return issues instead of aborting the full scan; group duplicate `(full_name, version)` records deterministically.
 
-- [ ] **Step 4: Run the archive tests to verify the implementation**
+- [x] **Step 4: Run the archive tests to verify the implementation**
 
 Run: `python -m pytest tests/test_archive.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit archive processing**
+- [x] **Step 5: Commit archive processing**
 
 ```bash
 git add gitflic_package/archive.py tests/test_archive.py
@@ -133,29 +133,29 @@ git commit -m "feat: scan Verdaccio npm tarballs"
 - `GitFlicClient.upload(artifact: PackageArtifact) -> None` performs an authenticated raw-byte PUT.
 - Produces `GitFlicError` subclasses for authentication, destination, duplicate, retry exhaustion, and other HTTP failures.
 
-- [ ] **Step 1: Write failing limiter and client tests**
+- [x] **Step 1: Write failing limiter and client tests**
 
 Add fake clock/sleeper and fake transport fixtures. Test `test_rate_limiter_waits_between_requests`, `test_retry_after_accepts_seconds_and_http_date`, `test_invalid_retry_after_uses_bounded_backoff`, `test_list_package_versions_follows_pagination`, `test_upload_builds_unscoped_url_and_token_header`, `test_upload_builds_scoped_url_without_leading_at`, `test_client_retries_429_and_honors_retry_after`, `test_client_retries_transient_5xx`, and `test_client_classifies_403_and_404`. Assert all requests carry `Authorization: token SECRET`, PUT uses `application/octet-stream`, inventory failure raises before any upload, and the token does not appear in raised error text.
 
-- [ ] **Step 2: Run the client tests to verify failure**
+- [x] **Step 2: Run the client tests to verify failure**
 
 Run: `python -m pytest tests/test_limiter.py tests/test_client.py -q`
 Expected: FAIL because `gitflic_package.limiter` and `gitflic_package.client` do not exist.
 
-- [ ] **Step 3: Implement the rate limiter**
+- [x] **Step 3: Implement the rate limiter**
 
 Implement monotonic minimum-interval enforcement with injectable clock/sleeper for deterministic tests. Parse integer-second and HTTP-date `Retry-After` values; use bounded exponential fallback for malformed/missing values. Ensure retries call the same limiter before each request and never introduce parallel or burst requests.
 
-- [ ] **Step 4: Implement the GitFlic transport and client**
+- [x] **Step 4: Implement the GitFlic transport and client**
 
 Implement `UrlLibTransport` with raw request bodies, bounded response reads, timeout forwarding, and HTTP error conversion. Build URLs with URL quoting while preserving path separators, use `/registry/project/{owner}/{project}/package`, follow `page`/`size` pagination, and upload to the scoped or unscoped npm endpoint. Classify 403/404/409/429/5xx and redact tokens from error messages.
 
-- [ ] **Step 5: Run the limiter and client tests to verify the implementation**
+- [x] **Step 5: Run the limiter and client tests to verify the implementation**
 
 Run: `python -m pytest tests/test_limiter.py tests/test_client.py -q`
 Expected: PASS.
 
-- [ ] **Step 6: Commit the GitFlic client**
+- [x] **Step 6: Commit the GitFlic client**
 
 ```bash
 git add gitflic_package/limiter.py gitflic_package/client.py tests/test_limiter.py tests/test_client.py
@@ -176,25 +176,25 @@ git commit -m "feat: add rate-limited GitFlic package client"
 - Produces `run_import(scan: ScanResult, client: GitFlicClient, dry_run: bool = False) -> ImportSummary`.
 - `run_import` calls inventory before any upload, marks existing versions skipped, marks new versions planned during dry-run, continues after individual upload failures, and raises `InventoryError` without uploading when inventory cannot be retrieved.
 
-- [ ] **Step 1: Write the failing importer tests**
+- [x] **Step 1: Write the failing importer tests**
 
 Add `test_run_import_skips_existing_versions`, `test_run_import_dry_run_never_calls_upload`, `test_run_import_uploads_new_artifacts_and_counts_results`, `test_run_import_continues_after_one_upload_failure`, `test_run_import_carries_invalid_and_source_duplicate_results`, and `test_run_import_does_not_upload_when_inventory_fails`. Assert exact statuses/counts, deterministic order, `ok=False` for unresolved upload failures, and `pytest.raises(InventoryError)` with zero upload calls when inventory fails.
 
-- [ ] **Step 2: Run the importer tests to verify failure**
+- [x] **Step 2: Run the importer tests to verify failure**
 
 Run: `python -m pytest tests/test_importer.py -q`
 Expected: FAIL because `gitflic_package.importer` does not exist.
 
-- [ ] **Step 3: Implement import orchestration**
+- [x] **Step 3: Implement import orchestration**
 
 Load the destination set once through `list_package_versions()`, convert scan issues into result records, decide by `(full_name, version)`, and process valid new artifacts in sorted order. Treat recognized duplicate upload errors as skipped; convert other exceptions into failed results while continuing. Keep dry-run free of PUT calls and make `ok` false for invalid/failed/inventory-error outcomes.
 
-- [ ] **Step 4: Run the importer tests to verify the implementation**
+- [x] **Step 4: Run the importer tests to verify the implementation**
 
 Run: `python -m pytest tests/test_importer.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit import orchestration**
+- [x] **Step 5: Commit import orchestration**
 
 ```bash
 git add gitflic_package/importer.py tests/test_importer.py
@@ -216,29 +216,29 @@ git commit -m "feat: orchestrate idempotent package imports"
 - `python -m gitflic_package import --config config.json [--dry-run] [--verbose]` performs planning or import.
 - Consumes `load_config`, `resolve_token`, `scan_archives`, `GitFlicClient`, and `run_import` from previous tasks.
 
-- [ ] **Step 1: Write the failing CLI tests**
+- [x] **Step 1: Write the failing CLI tests**
 
 Add `test_validate_returns_nonzero_for_invalid_archive`, `test_validate_does_not_require_token`, `test_import_dry_run_returns_zero_and_performs_no_put`, `test_import_returns_nonzero_for_upload_failure`, `test_missing_network_source_reports_clear_error`, and `test_cli_output_never_contains_token`. Assert command parsing, summary labels, exit codes, dry-run behavior, and redaction.
 
-- [ ] **Step 2: Run the CLI tests to verify failure**
+- [x] **Step 2: Run the CLI tests to verify failure**
 
 Run: `python -m pytest tests/test_cli.py -q`
 Expected: FAIL because `gitflic_package.cli` and `gitflic_package.__main__` do not exist.
 
-- [ ] **Step 3: Implement CLI dispatch and output**
+- [x] **Step 3: Implement CLI dispatch and output**
 
 Use `argparse` subcommands, load configuration once, run local validation without token resolution, resolve the token only for import, construct the client with the configured limiter/transport, print per-artifact and aggregate results, and convert expected errors to concise stderr messages and nonzero exit codes. Ensure verbose output contains no token. Make `__main__.py` call `main()` through `SystemExit`.
 
-- [ ] **Step 4: Document installation, configuration, token setup, rate limits, and examples**
+- [x] **Step 4: Document installation, configuration, token setup, rate limits, and examples**
 
 Replace the current title-only README with Python version requirements, JSON config, `GITFLIC_TOKEN` export examples for Windows PowerShell and POSIX shells, validate/dry-run/import commands, expected 10-second default pacing, rerun/idempotency behavior, and the documented SaaS/self-hosted rate-limit distinction. Do not place a real token in examples.
 
-- [ ] **Step 5: Run the full test suite and static checks**
+- [x] **Step 5: Run the full test suite and static checks**
 
 Run: `python -m pytest -q && python -m compileall gitflic_package && git diff --check`
 Expected: all tests PASS, compilation succeeds, and `git diff --check` produces no output.
 
-- [ ] **Step 6: Commit the CLI and documentation**
+- [x] **Step 6: Commit the CLI and documentation**
 
 ```bash
 git add gitflic_package/cli.py gitflic_package/__main__.py README.md tests/test_cli.py

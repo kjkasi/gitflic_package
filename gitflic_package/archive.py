@@ -80,7 +80,7 @@ def _metadata_name(value: object) -> tuple[str, str, str | None]:
         _safe_component(scope, "package scope")
         _safe_component(package_name, "package name")
         return value, package_name, scope
-    if "/" in value or "\\" in value or value.startswith("@"):
+    if "/" in value or "\\" in value:
         raise ArchiveValidationError("package name has invalid unscoped form")
     return value, _safe_component(value, "package name"), None
 

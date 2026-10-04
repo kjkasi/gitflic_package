@@ -39,10 +39,6 @@ class InventoryError(RuntimeError):
     """Raised when destination inventory cannot be safely loaded."""
 
 
-def _issue_name(path: Path) -> str:
-    return path.name
-
-
 def _request_attempts(client: GitFlicClient) -> int:
     attempts = getattr(client, "last_request_attempts", 1)
     return attempts if isinstance(attempts, int) and attempts >= 0 else 1
@@ -126,7 +122,7 @@ def run_import(
         results.append(
             ArtifactResult(
                 source_path=issue.source_path,
-                name=_issue_name(issue.source_path),
+                name=issue.source_path.name,
                 version="",
                 status="invalid",
                 attempts=0,
@@ -137,7 +133,7 @@ def run_import(
         results.append(
             ArtifactResult(
                 source_path=issue.source_path,
-                name=_issue_name(issue.source_path),
+                name=issue.source_path.name,
                 version="",
                 status="source-duplicate",
                 attempts=0,

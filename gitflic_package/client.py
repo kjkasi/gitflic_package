@@ -242,10 +242,9 @@ class GitFlicClient:
                     raise GitFlicError("GitFlic inventory response has invalid package entries")
                 if scope is not None and not isinstance(scope, str):
                     raise GitFlicError("GitFlic inventory response has invalid package entries")
-                if scope and isinstance(name, str) and not name.startswith("@"):
+                if scope and not name.startswith("@"):
                     name = f"@{scope}/{name}"
-                if isinstance(name, str) and isinstance(version, str):
-                    versions.add((name, version))
+                versions.add((name, version))
             page += 1
         return versions
 
