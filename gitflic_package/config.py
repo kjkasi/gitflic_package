@@ -99,8 +99,24 @@ def load_config(path: Path) -> AppConfig:
     base_url = _required_string(
         gitflic.get("base_url", "https://api.gitflic.ru"), "base_url"
     ).rstrip("/")
-    parsed_base_url = urlsplit(base_url)
-    if parsed_base_url.scheme.lower() != "https" or not parsed_base_url.netloc:
+    try:
+        parsed_base_url = urlsplit(base_url)
+        hostname = parsed_base_url.hostname
+        port = parsed_base_url.port
+    except ValueError as error:
+        raise ValueError("base_url must be an HTTPS URL") from error
+    if (
+        parsed_base_url.scheme.lower() != "https"
+        or not parsed_base_url.netloc
+        or not hostname
+        or parsed_base_url.username is not None
+        or parsed_base_url.password is not None
+        or "\\" in parsed_base_url.netloc
+        or "?" in base_url
+        or "#" in base_url
+        or parsed_base_url.netloc.endswith(":")
+        or (port is not None and not 1 <= port <= 65535)
+    ):
         raise ValueError("base_url must be an HTTPS URL")
 
     gitflic_config = GitFlicConfig(

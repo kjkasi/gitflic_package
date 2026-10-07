@@ -63,6 +63,43 @@ def test_load_config_rejects_non_https_base_url(tmp_path: Path) -> None:
         load_config(write_config(tmp_path, data))
 
 
+@pytest.mark.parametrize(
+    "base_url",
+    (
+        "https://user:pass@api.gitflic.ru",
+        "https://api.gitflic.ru@evil.example",
+        "https://api.gitflic.ru?redirect=evil.example",
+        "https://api.gitflic.ru#fragment",
+        "https://api.gitflic.ru?",
+        "https://api.gitflic.ru#",
+        "https://api.gitflic.ru:",
+        "https://api.gitflic.ru:0",
+        "https://api.gitflic.ru:65536",
+        "https://api.gitflic.ru:not-a-port",
+        "https://api.gitflic.ru\\evil",
+        "https:///registry",
+        "https://[invalid",
+    ),
+)
+def test_load_config_rejects_malformed_or_unsafe_https_base_url(
+    tmp_path: Path, base_url: str
+) -> None:
+    data = valid_config(tmp_path)
+    data["gitflic"]["base_url"] = base_url
+
+    with pytest.raises(ValueError, match="HTTPS"):
+        load_config(write_config(tmp_path, data))
+
+
+def test_load_config_accepts_valid_https_port(tmp_path: Path) -> None:
+    data = valid_config(tmp_path)
+    data["gitflic"]["base_url"] = "https://api.gitflic.ru:8443/"
+
+    config = load_config(write_config(tmp_path, data))
+
+    assert config.gitflic.base_url == "https://api.gitflic.ru:8443"
+
+
 def test_omitted_token_env_does_not_fall_back_to_legacy_name(tmp_path: Path) -> None:
     data = valid_config(tmp_path)
     del data["gitflic"]["token_env"]
