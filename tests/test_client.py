@@ -134,7 +134,7 @@ def test_upload_builds_unscoped_url_and_token_header(tmp_path: Path) -> None:
 
     method, url, headers, body, timeout = transport.requests[0]
     assert method == "PUT"
-    assert url.endswith("/registry/project/team/npm-cache/package/npm/pkg/1.0.0/pkg-1.0.0.tgz")
+    assert url == "https://api.gitflic.ru/registry/project/team/npm-cache/package/npm/pkg/1.0.0/pkg-1.0.0.tgz"
     assert headers["Authorization"] == "token SECRET"
     assert headers["Content-Type"] == "application/octet-stream"
     assert body == b"tarball-bytes"
@@ -146,8 +146,9 @@ def test_upload_builds_scoped_url_without_leading_at(tmp_path: Path) -> None:
 
     make_client(transport).upload(artifact(tmp_path, scoped=True))
 
-    assert transport.requests[0][1].endswith(
-        "/registry/project/team/npm-cache/package/npm/pkg/scope/1.0.0/scoped.tgz"
+    assert transport.requests[0][1] == (
+        "https://api.gitflic.ru/registry/project/team/npm-cache/package/npm/pkg/"
+        "scope/1.0.0/scoped.tgz"
     )
     assert "@scope" not in transport.requests[0][1]
 

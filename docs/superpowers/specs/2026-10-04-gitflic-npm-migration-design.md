@@ -72,7 +72,7 @@ The configuration file is JSON:
 Requirements:
 
 - `source_dir` must exist and be a directory; local paths and UNC paths are supported.
-- `base_url`, `owner_alias`, and `project_alias` must be nonempty; trailing slashes are normalized.
+- `base_url` must be an HTTPS URL; `owner_alias` and `project_alias` must be nonempty; trailing slashes are normalized.
 - `token_env` names the environment variable containing the API access token. The token must be present and nonempty before any GitFlic request.
 - `timeout_seconds` and `page_size` must be positive.
 - `min_interval_seconds` must be nonnegative. The default is 10 seconds, approximately 360 requests/hour, leaving headroom below the documented 500/hour SaaS API limit.

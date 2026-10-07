@@ -55,6 +55,14 @@ def test_load_config_defaults_to_api_endpoint_and_api_token_env(tmp_path: Path) 
     assert config.gitflic.token_env == "GITFLIC_API_TOKEN"
 
 
+def test_load_config_rejects_non_https_base_url(tmp_path: Path) -> None:
+    data = valid_config(tmp_path)
+    data["gitflic"]["base_url"] = "http://api.gitflic.ru"
+
+    with pytest.raises(ValueError, match="HTTPS"):
+        load_config(write_config(tmp_path, data))
+
+
 def test_omitted_token_env_does_not_fall_back_to_legacy_name(tmp_path: Path) -> None:
     data = valid_config(tmp_path)
     del data["gitflic"]["token_env"]

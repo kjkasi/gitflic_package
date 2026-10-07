@@ -8,6 +8,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
+from urllib.parse import urlsplit
 
 
 @dataclass(frozen=True)
@@ -98,8 +99,9 @@ def load_config(path: Path) -> AppConfig:
     base_url = _required_string(
         gitflic.get("base_url", "https://api.gitflic.ru"), "base_url"
     ).rstrip("/")
-    if not base_url:
-        raise ValueError("base_url must be a non-empty string")
+    parsed_base_url = urlsplit(base_url)
+    if parsed_base_url.scheme.lower() != "https" or not parsed_base_url.netloc:
+        raise ValueError("base_url must be an HTTPS URL")
 
     gitflic_config = GitFlicConfig(
         base_url=base_url,

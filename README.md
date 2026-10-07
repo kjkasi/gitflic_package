@@ -30,7 +30,7 @@ Create a JSON file pointing at the source directory and GitFlic project:
 }
 ```
 
-`source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` defaults to `https://api.gitflic.ru`; `timeout_seconds` and `page_size` must be positive.
+`source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` must be an HTTPS URL and defaults to `https://api.gitflic.ru`; `timeout_seconds` and `page_size` must be positive.
 
 ### Migrating existing configuration
 
@@ -76,9 +76,9 @@ registry=https://registry.gitflic.ru/project/<owner>/<project>/package/-/npm/
 For this CLI, do not use `https://gitflic.ru` (the web UI) or
 `https://registry.gitflic.ru` as `base_url`. The first redirects unauthenticated
 requests to `/auth/login` with HTTP `302`; the second is the npm registry host.
-Use `https://api.gitflic.ru` for SaaS, or the REST API base URL of your self-hosted
-GitFlic instance. A `302` from this CLI usually means the web UI URL was configured
-instead of the REST API URL.
+Use `https://api.gitflic.ru` for SaaS, or an HTTPS REST API base URL for your
+self-hosted GitFlic instance. A `302` from this CLI usually means the web UI URL
+was configured instead of the REST API URL.
 
 ## Commands
 
