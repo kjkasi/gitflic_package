@@ -28,7 +28,7 @@ def write_config(tmp_path: Path, source_dir: Path, *, max_retries: int = 0) -> P
     config = {
         "source_dir": str(source_dir),
         "gitflic": {
-            "base_url": "https://registry.gitflic.ru",
+            "base_url": "https://api.gitflic.ru",
             "owner_alias": "team",
             "project_alias": "npm-cache",
             "token_env": "GITFLIC_TOKEN",

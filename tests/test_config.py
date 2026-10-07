@@ -20,7 +20,7 @@ def valid_config(source_dir: Path) -> dict:
     return {
         "source_dir": str(source_dir),
         "gitflic": {
-            "base_url": "https://registry.gitflic.ru/",
+            "base_url": "https://api.gitflic.ru/",
             "owner_alias": "team",
             "project_alias": "npm-cache",
             "token_env": "GITFLIC_TOKEN",
@@ -34,7 +34,7 @@ def test_load_config_applies_defaults_and_normalizes_base_url(tmp_path: Path) ->
     config = load_config(write_config(tmp_path, valid_config(tmp_path)))
 
     assert config.source_dir == tmp_path
-    assert config.gitflic.base_url == "https://registry.gitflic.ru"
+    assert config.gitflic.base_url == "https://api.gitflic.ru"
     assert config.gitflic.owner_alias == "team"
     assert config.gitflic.project_alias == "npm-cache"
     assert config.gitflic.token_env == "GITFLIC_TOKEN"
@@ -120,7 +120,7 @@ def test_load_config_rejects_non_finite_float_values(tmp_path: Path) -> None:
 
 def test_resolve_token_rejects_header_unsafe_token_without_echoing_it() -> None:
     config = GitFlicConfig(
-        base_url="https://registry.gitflic.ru",
+        base_url="https://api.gitflic.ru",
         owner_alias="team",
         project_alias="npm-cache",
         token_env="CUSTOM_TOKEN",
@@ -135,7 +135,7 @@ def test_resolve_token_rejects_header_unsafe_token_without_echoing_it() -> None:
 
 def test_resolve_token_reads_named_environment_variable_and_rejects_missing_token() -> None:
     config = GitFlicConfig(
-        base_url="https://registry.gitflic.ru",
+        base_url="https://api.gitflic.ru",
         owner_alias="team",
         project_alias="npm-cache",
         token_env="CUSTOM_TOKEN",

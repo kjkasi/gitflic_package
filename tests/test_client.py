@@ -45,7 +45,7 @@ def response(status: int, payload: object | None = None, headers: dict[str, str]
 
 def config() -> GitFlicConfig:
     return GitFlicConfig(
-        base_url="https://registry.gitflic.ru/",
+        base_url="https://api.gitflic.ru/",
         owner_alias="team",
         project_alias="npm-cache",
         token_env="GITFLIC_TOKEN",
