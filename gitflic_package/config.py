@@ -96,7 +96,7 @@ def load_config(path: Path) -> AppConfig:
         raise ValueError("gitflic must be an object")
 
     base_url = _required_string(
-        gitflic.get("base_url", "https://registry.gitflic.ru"), "base_url"
+        gitflic.get("base_url", "https://api.gitflic.ru"), "base_url"
     ).rstrip("/")
     if not base_url:
         raise ValueError("base_url must be a non-empty string")
@@ -106,7 +106,7 @@ def load_config(path: Path) -> AppConfig:
         owner_alias=_required_string(gitflic.get("owner_alias"), "owner_alias"),
         project_alias=_required_string(gitflic.get("project_alias"), "project_alias"),
         token_env=_required_string(
-            gitflic.get("token_env", "GITFLIC_TOKEN"), "token_env"
+            gitflic.get("token_env", "GITFLIC_API_TOKEN"), "token_env"
         ),
         timeout_seconds=_positive_float(
             gitflic.get("timeout_seconds", 60), "timeout_seconds"
@@ -136,7 +136,7 @@ def load_config(path: Path) -> AppConfig:
 def resolve_token(
     config: GitFlicConfig, environ: Mapping[str, str] | None = None
 ) -> str:
-    """Resolve the configured transport token without storing it in config."""
+    """Resolve the configured API access token without storing it in config."""
     environment = os.environ if environ is None else environ
     token = environment.get(config.token_env)
     if token is None or not token.strip():

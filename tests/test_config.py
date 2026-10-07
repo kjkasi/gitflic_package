@@ -44,6 +44,17 @@ def test_load_config_applies_defaults_and_normalizes_base_url(tmp_path: Path) ->
     assert config.rate_limit.max_retries == 5
 
 
+def test_load_config_defaults_to_api_endpoint_and_api_token_env(tmp_path: Path) -> None:
+    data = valid_config(tmp_path)
+    del data["gitflic"]["base_url"]
+    del data["gitflic"]["token_env"]
+
+    config = load_config(write_config(tmp_path, data))
+
+    assert config.gitflic.base_url == "https://api.gitflic.ru"
+    assert config.gitflic.token_env == "GITFLIC_API_TOKEN"
+
+
 def test_load_config_reads_explicit_rate_limit(tmp_path: Path) -> None:
     data = valid_config(tmp_path)
     data["rate_limit"] = {"min_interval_seconds": 0.25, "max_retries": 2}

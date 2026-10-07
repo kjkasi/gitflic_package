@@ -16,10 +16,10 @@ Create a JSON file pointing at the source directory and GitFlic project:
 {
   "source_dir": "\\\\server\\verdaccio\\storage",
   "gitflic": {
-    "base_url": "https://registry.gitflic.ru",
+    "base_url": "https://api.gitflic.ru",
     "owner_alias": "team",
     "project_alias": "npm-cache",
-    "token_env": "GITFLIC_TOKEN",
+    "token_env": "GITFLIC_API_TOKEN",
     "timeout_seconds": 60,
     "page_size": 100
   },
@@ -30,21 +30,45 @@ Create a JSON file pointing at the source directory and GitFlic project:
 }
 ```
 
-`source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` defaults to `https://registry.gitflic.ru`; `timeout_seconds` and `page_size` must be positive.
+`source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` defaults to `https://api.gitflic.ru`; `timeout_seconds` and `page_size` must be positive.
 
-The transport token is read only from the configured environment variable. It is never accepted as a command-line argument or stored in the JSON file.
+### Authentication and token choice
+
+This CLI calls the GitFlic **REST package API** at `/registry/...`; it is not an npm client.
+Use an **API access token** created in GitFlic under **Profile settings → API Tokens**.
+The token needs permission to read the project registry and create packages.
+It is sent as `Authorization: token <api-access-token>`.
+
+The configured `token_env` names the environment variable containing that API access token. The token is never accepted as a command-line argument or stored in the JSON file.
 
 PowerShell:
 
 ```powershell
-$env:GITFLIC_TOKEN = "<transport-token>"
+$env:GITFLIC_API_TOKEN = "<api-access-token>"
 ```
 
 POSIX shells:
 
 ```sh
-export GITFLIC_TOKEN='<transport-token>'
+export GITFLIC_API_TOKEN='<api-access-token>'
 ```
+
+Do **not** put a transport token in `GITFLIC_API_TOKEN`. A transport token is a
+separate credential created under **Profile settings → Transport Tokens** for the
+npm/package registry transport. It belongs in npm configuration as `_authToken`
+for a registry URL such as:
+
+```ini
+registry=https://registry.gitflic.ru/project/<owner>/<project>/package/-/npm/
+//registry.gitflic.ru/project/<owner>/<project>/package/-/npm/:_authToken=<transport-token>
+```
+
+For this CLI, do not use `https://gitflic.ru` (the web UI) or
+`https://registry.gitflic.ru` as `base_url`. The first redirects unauthenticated
+requests to `/auth/login` with HTTP `302`; the second is the npm registry host.
+Use `https://api.gitflic.ru` for SaaS, or the REST API base URL of your self-hosted
+GitFlic instance. A `302` from this CLI usually means the web UI URL was configured
+instead of the REST API URL.
 
 ## Commands
 
