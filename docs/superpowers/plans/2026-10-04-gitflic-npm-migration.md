@@ -231,7 +231,7 @@ Use `argparse` subcommands, load configuration once, run local validation withou
 
 - [x] **Step 4: Document installation, configuration, token setup, rate limits, and examples**
 
-Replace the current title-only README with Python version requirements, JSON config, `GITFLIC_TOKEN` export examples for Windows PowerShell and POSIX shells, validate/dry-run/import commands, expected 10-second default pacing, rerun/idempotency behavior, and the documented SaaS/self-hosted rate-limit distinction. Do not place a real token in examples.
+Replace the current title-only README with Python version requirements, JSON config, `GITFLIC_API_TOKEN` export examples for Windows PowerShell and POSIX shells, API access-token setup, validate/dry-run/import commands, expected 10-second default pacing, rerun/idempotency behavior, and the documented SaaS/self-hosted rate-limit distinction. Explain that the REST API uses `https://api.gitflic.ru`, while transport tokens belong to npm registry configuration. Do not place a real token in examples.
 
 - [x] **Step 5: Run the full test suite and static checks**
 

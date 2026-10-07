@@ -29,10 +29,10 @@ The implementation targets the documented project package API:
 - Upload a scoped npm package: `PUT /registry/project/{ownerAlias}/{projectAlias}/package/npm/{packageName}/{packageScope}/{packageVersion}/{fileName}`.
 - Successful upload returns HTTP 200.
 - The request body is the tarball bytes and the content type is `application/octet-stream`.
-- Authentication uses `Authorization: token <transport-token>`.
+- Authentication uses an API access token in `Authorization: token <api-access-token>`.
 - The list endpoint is paginated using `page` and `size` query parameters and returns package entries under `_embedded.simplePackageInfoModelList`.
 
-The configured base URL defaults to `https://registry.gitflic.ru` and can be changed for self-hosted GitFlic. The API documentation reports a 500-requests-per-hour SaaS API limit; self-hosted instances can configure hourly, per-IP, and per-user limits. No separate npm-specific limit is documented.
+The configured base URL defaults to `https://api.gitflic.ru` and can be changed for self-hosted GitFlic. The API documentation reports a 500-requests-per-hour SaaS API limit; self-hosted instances can configure hourly, per-IP, and per-user limits. No separate npm-specific limit is documented.
 
 ## Architecture
 
@@ -55,10 +55,10 @@ The configuration file is JSON:
 {
   "source_dir": "\\\\server\\verdaccio\\storage",
   "gitflic": {
-    "base_url": "https://registry.gitflic.ru",
+    "base_url": "https://api.gitflic.ru",
     "owner_alias": "team",
     "project_alias": "npm-cache",
-    "token_env": "GITFLIC_TOKEN",
+    "token_env": "GITFLIC_API_TOKEN",
     "timeout_seconds": 60,
     "page_size": 100
   },
@@ -136,7 +136,7 @@ A retry still passes through the limiter. After `max_retries`, the artifact is f
 - Missing or invalid configuration/token: fail before any GitFlic request.
 - Missing source directory: fail before import.
 - Invalid tarball/package metadata: report invalid and continue scanning.
-- HTTP 403: report an authentication or `CREATE_PACKAGE`/transport-token permission problem.
+- HTTP 403: report an authentication or `READ_REGISTRY`/`CREATE_PACKAGE` API-token permission problem.
 - HTTP 404: report an invalid GitFlic base URL, owner, project, or destination.
 - HTTP 409 or a recognizable already-exists response: report skipped where safe.
 - HTTP 429, transient 5xx, and timeouts: retry according to the limiter policy, then fail the affected artifact.
