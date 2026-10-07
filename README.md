@@ -32,6 +32,16 @@ Create a JSON file pointing at the source directory and GitFlic project:
 
 `source_dir` may be a local or UNC/network path and must be an existing directory. `base_url` defaults to `https://api.gitflic.ru`; `timeout_seconds` and `page_size` must be positive.
 
+### Migrating existing configuration
+
+Configurations that omit `base_url` now use the REST API endpoint
+`https://api.gitflic.ru`; configurations that omit `token_env` now use
+`GITFLIC_API_TOKEN`. If an existing configuration relied on the former implicit
+`GITFLIC_TOKEN` default, set `token_env` explicitly and export an API access
+token in that variable before importing. Existing configurations with an
+explicit `token_env` continue to use that variable, but its value must be an
+API access token.
+
 ### Authentication and token choice
 
 This CLI calls the GitFlic **REST package API** at `/registry/...`; it is not an npm client.

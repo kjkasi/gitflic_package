@@ -73,7 +73,7 @@ Requirements:
 
 - `source_dir` must exist and be a directory; local paths and UNC paths are supported.
 - `base_url`, `owner_alias`, and `project_alias` must be nonempty; trailing slashes are normalized.
-- `token_env` names the environment variable containing the transport token. The token must be present and nonempty before any GitFlic request.
+- `token_env` names the environment variable containing the API access token. The token must be present and nonempty before any GitFlic request.
 - `timeout_seconds` and `page_size` must be positive.
 - `min_interval_seconds` must be nonnegative. The default is 10 seconds, approximately 360 requests/hour, leaving headroom below the documented 500/hour SaaS API limit.
 - `max_retries` must be nonnegative. The default is 5.
@@ -162,7 +162,7 @@ The test suite will run without a GitFlic account using temporary directories, g
 
 ## Acceptance criteria
 
-The feature is complete when an operator can point the JSON config at a copied Verdaccio storage directory, export the configured GitFlic transport token, run dry-run, review upload/skip decisions, and run import to migrate all valid missing package versions. Re-running the command does not re-upload existing versions, respects the configured request interval, produces a useful summary, and returns a failing exit code only when the migration has unresolved validation, inventory, or upload errors.
+The feature is complete when an operator can point the JSON config at a copied Verdaccio storage directory, export the configured GitFlic API access token, run dry-run, review upload/skip decisions, and run import to migrate all valid missing package versions. Re-running the command does not re-upload existing versions, respects the configured request interval, produces a useful summary, and returns a failing exit code only when the migration has unresolved validation, inventory, or upload errors.
 
 ## References
 
